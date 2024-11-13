@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Snowflake,
   FishIcon,
@@ -20,15 +20,14 @@ interface Fish {
   average_lifespan: string;
   habitat: string;
   diet: string;
+  endangered_status: string;
   blurb: string;
   image_path: string;
 }
 
 async function getRandomFish(): Promise<Fish> {
   const fish = await invoke("get_random_fish");
-
   console.log("Fetched fish:", fish);
-
   return fish as Fish;
 }
 
@@ -96,7 +95,7 @@ function FishDisplay({ fish }: { fish: Fish }) {
           <img
             src={fish.image_path}
             alt={fish.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-fit"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-blue-500/50 to-transparent"></div>
         </div>
@@ -133,6 +132,7 @@ export function Index() {
   const [fish, setFish] = useState<Fish | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFish, setShowFish] = useState(false);
+  const [snowflakes, setSnowflakes] = useState<JSX.Element[]>([]);
 
   const fetchRandomFish = async () => {
     setLoading(true);
@@ -140,7 +140,7 @@ export function Index() {
       const newFish = await getRandomFish();
       setFish(newFish);
       setShowFish(true);
-      setTimeout(() => setShowFish(false), 10000); // Switch back to default screen after 20 seconds
+      setTimeout(() => setShowFish(false), 10000); // Switch back to default screen after 10 seconds
     } catch (error) {
       console.error("Failed to fetch fish:", error);
     } finally {
@@ -148,42 +148,75 @@ export function Index() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-blue-200 flex flex-col justify-center items-center p-4">
-      <Card className="w-full max-w-4xl bg-white/80 backdrop-blur-sm shadow-lg rounded-lg overflow-hidden border-4 border-blue-300">
-        <CardHeader className="bg-blue-500 text-white">
-          <CardTitle className="text-3xl font-bold flex items-center justify-between">
-            <span>Arctic Fish Explorer</span>
-            <Snowflake className="w-8 h-8" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <FishIcon className="w-16 h-16 text-blue-500 animate-bounce" />
-            </div>
-          ) : showFish && fish ? (
-            <FishDisplay fish={fish} />
-          ) : (
-            <DefaultScreen onDiscoverClick={fetchRandomFish} />
-          )}
-        </CardContent>
-      </Card>
-      <div className="fixed top-0 left-0 right-0 bottom-0 pointer-events-none">
-        {[...Array(30)].map((_, i) => (
+  useEffect(() => {
+    let interval: number | null = null;
+
+    if (!showFish) {
+      interval = setInterval(() => {
+        setSnowflakes((prevSnowflakes) => [
+          ...prevSnowflakes,
           <Snowflake
-            key={i}
-            className="text-white opacity-50 absolute animate-fall"
+            key={Math.random()}
+            className="text-blue-400 opacity-50 absolute"
             style={{
               left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDuration: `${Math.random() * 10 + 5}s`,
-              animationDelay: `${Math.random() * 5}s`,
+              top: `-10%`,
               fontSize: `${Math.random() * 10 + 10}px`,
+              animation: `snowfall ${Math.random() * 10 + 25}s linear infinite`,
+              animationDelay: `${Math.random() * 10}s`,
+              zIndex: -1,
             }}
-          />
-        ))}
+          />,
+        ]);
+      }, 1500); // Add a new snowflake every second
+    } else {
+      setSnowflakes([]);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showFish]);
+
+  return (
+    <>
+      <style jsx global>{`
+        @keyframes snowfall {
+          0% {
+            transform: translateY(-10vh) rotate(0deg);
+          }
+          100% {
+            transform: translateY(110vh) rotate(360deg);
+          }
+        }
+      `}</style>
+      <div className="min-h-screen bg-gradient-to-b from-blue-100 to-blue-200 flex flex-col justify-center items-center p-4">
+        <Card
+          className="w-full max-w-4xl bg-white/80 backdrop-blur-sm shadow-lg rounded-lg overflow-hidden border-4 border-blue-300"
+          style={{ zIndex: 1 }}
+        >
+          <CardHeader className="bg-blue-500 text-white">
+            <CardTitle className="text-3xl font-bold flex items-center justify-between">
+              <span>Arctic Fish Explorer</span>
+              <Snowflake className="w-8 h-8" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <FishIcon className="w-16 h-16 text-blue-500 animate-bounce" />
+              </div>
+            ) : showFish && fish ? (
+              <FishDisplay fish={fish} />
+            ) : (
+              <DefaultScreen onDiscoverClick={fetchRandomFish} />
+            )}
+          </CardContent>
+        </Card>
+        <div className="fixed top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden">
+          {snowflakes}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
