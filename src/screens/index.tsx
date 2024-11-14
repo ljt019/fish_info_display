@@ -7,9 +7,12 @@ import {
   Home,
   Utensils,
   Ruler,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { invoke } from "@tauri-apps/api";
 
 interface Fish {
@@ -23,6 +26,7 @@ interface Fish {
   endangered_status: string;
   blurb: string;
   image_path: string;
+  fun_fact: string;
 }
 
 async function getRandomFish(): Promise<Fish> {
@@ -58,10 +62,8 @@ function FishDisplay({ fish }: { fish: Fish }) {
         <h2 className="text-3xl font-bold text-blue-700 border-b-2 border-blue-300 pb-2">
           {fish.name}
         </h2>
-        <div className="bg-blue-200 p-4 rounded-lg shadow-inner">
-          <p className="text-sm text-gray-600 italic">{fish.blurb}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
+        <EndangeredStatusBadge status={fish.endangered_status} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoCard
             icon={<Ruler className="w-5 h-5" />}
             title="Size"
@@ -86,11 +88,12 @@ function FishDisplay({ fish }: { fish: Fish }) {
             icon={<Utensils className="w-5 h-5" />}
             title="Diet"
             value={fish.diet}
-            className="col-span-2"
+            className="sm:col-span-2"
           />
+          <FunFactCard funFact={fish.fun_fact} className="sm:col-span-2" />
         </div>
       </div>
-      <div className="flex flex-col justify-center items-center space-y-4">
+      <div className="flex flex-col space-y-4">
         <div className="w-full h-80 bg-blue-100 rounded-lg overflow-hidden relative shadow-lg">
           <img
             src={fish.image_path}
@@ -99,6 +102,31 @@ function FishDisplay({ fish }: { fish: Fish }) {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-blue-500/50 to-transparent"></div>
         </div>
+        <div className="bg-blue-200 p-4 rounded-lg shadow-inner">
+          <p className="text-sm text-gray-600 italic">{fish.blurb}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FunFactCard({
+  funFact,
+  className = "",
+}: {
+  funFact: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`bg-blue-100 p-3 rounded-lg shadow flex items-start space-x-3 ${className}`}
+    >
+      <div className="bg-blue-300 p-2 rounded-full">
+        <Sparkles className="w-5 h-5 text-blue-700" />
+      </div>
+      <div>
+        <h3 className="font-semibold text-blue-800">Fun Fact</h3>
+        <p className="text-sm text-gray-600">{funFact}</p>
       </div>
     </div>
   );
@@ -128,6 +156,50 @@ function InfoCard({
   );
 }
 
+function EndangeredStatusBadge({ status }: { status: string }) {
+  const { color, icon } = getStatusInfo(status);
+
+  return (
+    <Badge
+      className={`${color} text-white px-3 py-1 text-sm font-semibold rounded-full flex items-center space-x-2`}
+    >
+      {icon}
+      <span>{status}</span>
+    </Badge>
+  );
+}
+
+function getStatusInfo(status: string): { color: string; icon: JSX.Element } {
+  switch (status.toLowerCase()) {
+    case "critically endangered":
+      return {
+        color: "bg-red-500",
+        icon: <AlertTriangle className="w-4 h-4" />,
+      };
+    case "endangered":
+      return {
+        color: "bg-orange-500",
+        icon: <AlertTriangle className="w-4 h-4" />,
+      };
+    case "vulnerable":
+      return {
+        color: "bg-yellow-500",
+        icon: <AlertTriangle className="w-4 h-4" />,
+      };
+    case "near threatened":
+      return {
+        color: "bg-yellow-400",
+        icon: <AlertTriangle className="w-4 h-4" />,
+      };
+    case "least concern":
+      return { color: "bg-green-500", icon: <FishIcon className="w-4 h-4" /> };
+    case "not evaluated":
+    case "data deficient":
+    default:
+      return { color: "bg-gray-500", icon: <FishIcon className="w-4 h-4" /> };
+  }
+}
+
 export function Index() {
   const [fish, setFish] = useState<Fish | null>(null);
   const [loading, setLoading] = useState(false);
@@ -151,27 +223,23 @@ export function Index() {
   useEffect(() => {
     let interval: number | null = null;
 
-    if (!showFish) {
-      interval = setInterval(() => {
-        setSnowflakes((prevSnowflakes) => [
-          ...prevSnowflakes,
-          <Snowflake
-            key={Math.random()}
-            className="text-blue-400 opacity-50 absolute"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `-10%`,
-              fontSize: `${Math.random() * 10 + 10}px`,
-              animation: `snowfall ${Math.random() * 10 + 25}s linear infinite`,
-              animationDelay: `${Math.random() * 10}s`,
-              zIndex: -1,
-            }}
-          />,
-        ]);
-      }, 1500); // Add a new snowflake every second
-    } else {
-      setSnowflakes([]);
-    }
+    interval = setInterval(() => {
+      setSnowflakes((prevSnowflakes) => [
+        ...prevSnowflakes,
+        <Snowflake
+          key={Math.random()}
+          className="text-blue-400 opacity-50 absolute"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `-10%`,
+            fontSize: `${Math.random() * 10 + 10}px`,
+            animation: `snowfall ${Math.random() * 10 + 25}s linear infinite`,
+            animationDelay: `${Math.random() * 10}s`,
+            zIndex: -1,
+          }}
+        />,
+      ]);
+    }, 1500); // Add a new snowflake every 1.5 seconds
 
     return () => {
       if (interval) clearInterval(interval);
@@ -180,7 +248,7 @@ export function Index() {
 
   return (
     <>
-      <style jsx global>{`
+      <style>{`
         @keyframes snowfall {
           0% {
             transform: translateY(-10vh) rotate(0deg);

@@ -15,8 +15,10 @@ struct FishInfo {
     average_lifespan: String,
     habitat: String,
     diet: String,
+    endangered_status: String,
     blurb: String,
     image_path: String,
+    fun_fact: String,
 }
 
 // Load the fish data from the JSON file
