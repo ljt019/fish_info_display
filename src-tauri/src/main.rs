@@ -46,34 +46,21 @@ fn nfc_reader_loop(nfc_reader: Arc<Mutex<NfcReader>>, app_handle: tauri::AppHand
     // Clone the Arc to move into the thread
     let nfc_reader = Arc::clone(&nfc_reader);
     thread::spawn(move || {
-        loop {
-            // Lock the NFC reader for exclusive access
-            let uid_result = {
-                let mut reader = nfc_reader.lock().unwrap();
-                reader.read_tag()
-            };
-
-            match uid_result {
-                Ok(uid) => {
-                    // Convert UID (Vec<u8>) to u32. This assumes the UID fits into u32.
-                    // Adjust this conversion based on your actual UID format.
-                    if uid.len() >= 4 {
-                        let id = u32::from_be_bytes([uid[0], uid[1], uid[2], uid[3]]);
-                        println!("Read UID: {:?}, converted ID: {}", uid, id);
-                        let fish = get_fish_by_id(id);
-                        // Emit the fish data to the frontend
-                        app_handle.emit_all("nfc-tag-read", fish).unwrap();
-                    } else {
-                        eprintln!("UID length is less than 4 bytes: {:?}", uid);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Error reading NFC tag: {}", e);
-                }
+        let mut reader = nfc_reader.lock().unwrap();
+        if let Err(e) = reader.start_reading(|uid| {
+            // Convert UID (Vec<u8>) to u32. This assumes the UID fits into u32.
+            // Adjust this conversion based on your actual UID format.
+            if uid.len() >= 4 {
+                let id = u32::from_be_bytes([uid[0], uid[1], uid[2], uid[3]]);
+                println!("Read UID: {:?}, converted ID: {}", uid, id);
+                let fish = get_fish_by_id(id);
+                // Emit the fish data to the frontend
+                app_handle.emit_all("nfc-tag-read", fish).unwrap();
+            } else {
+                eprintln!("UID length is less than 4 bytes: {:?}", uid);
             }
-
-            // Sleep for a short duration to prevent tight looping
-            thread::sleep(std::time::Duration::from_millis(500));
+        }) {
+            eprintln!("Error reading NFC tag: {}", e);
         }
     });
 }

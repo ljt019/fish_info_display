@@ -10,10 +10,9 @@ import {
   AlertTriangle,
   Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { invoke } from "@tauri-apps/api";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 
 interface Fish {
   id: number;
@@ -29,13 +28,7 @@ interface Fish {
   fun_fact: string;
 }
 
-async function getRandomFish(): Promise<Fish> {
-  const fish = await invoke("get_random_fish");
-  console.log("Fetched fish:", fish);
-  return fish as Fish;
-}
-
-function DefaultScreen({ onDiscoverClick }: { onDiscoverClick: () => void }) {
+function DefaultScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full space-y-8">
       <h2 className="text-4xl font-bold text-blue-700">
@@ -45,12 +38,6 @@ function DefaultScreen({ onDiscoverClick }: { onDiscoverClick: () => void }) {
         Dive into the fascinating world of arctic fish! Catch a fish, scan it,
         and uncover fascinating facts about your unique catch.
       </p>
-      <Button
-        onClick={onDiscoverClick}
-        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transform transition hover:scale-105"
-      >
-        Scan Placeholder
-      </Button>
     </div>
   );
 }
@@ -98,7 +85,7 @@ function FishDisplay({ fish }: { fish: Fish }) {
           <img
             src={fish.image_path}
             alt={fish.name}
-            className="w-full h-full object-fit"
+            className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-blue-500/50 to-transparent"></div>
         </div>
@@ -202,28 +189,30 @@ function getStatusInfo(status: string): { color: string; icon: JSX.Element } {
 
 export function Index() {
   const [fish, setFish] = useState<Fish | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showFish, setShowFish] = useState(false);
   const [snowflakes, setSnowflakes] = useState<JSX.Element[]>([]);
 
-  const fetchRandomFish = async () => {
-    setLoading(true);
-    try {
-      const newFish = await getRandomFish();
-      setFish(newFish);
-      setShowFish(true);
-      setTimeout(() => setShowFish(false), 10000); // Switch back to default screen after 10 seconds
-    } catch (error) {
-      console.error("Failed to fetch fish:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+
+    const setupListener = async () => {
+      unlisten = await listen<Fish>("nfc-tag-read", (event: any) => {
+        setFish(event.payload);
+      });
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let interval: number | null = null;
 
-    interval = setInterval(() => {
+    interval = window.setInterval(() => {
       setSnowflakes((prevSnowflakes) => [
         ...prevSnowflakes,
         <Snowflake
@@ -244,7 +233,7 @@ export function Index() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [showFish]);
+  }, []);
 
   return (
     <>
@@ -270,15 +259,7 @@ export function Index() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <FishIcon className="w-16 h-16 text-blue-500 animate-bounce" />
-              </div>
-            ) : showFish && fish ? (
-              <FishDisplay fish={fish} />
-            ) : (
-              <DefaultScreen onDiscoverClick={fetchRandomFish} />
-            )}
+            {fish ? <FishDisplay fish={fish} /> : <DefaultScreen />}
           </CardContent>
         </Card>
         <div className="fixed top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden">
