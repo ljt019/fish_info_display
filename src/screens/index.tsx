@@ -28,6 +28,12 @@ interface Fish {
   fun_fact: string;
 }
 
+// Time to display fish information
+const fish_info_display_time_in_seconds = 10; // 10 seconds
+
+// Convert seconds to milliseconds
+const fish_info_display_time = fish_info_display_time_in_seconds * 1000;
+
 function DefaultScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full space-y-8">
@@ -195,7 +201,7 @@ export function Index() {
     let unlisten: UnlistenFn | null = null;
 
     const setupListener = async () => {
-      unlisten = await listen<Fish>("nfc-tag-read", (event: any) => {
+      unlisten = await listen<Fish>("fishData", (event: any) => {
         setFish(event.payload);
       });
     };
@@ -208,6 +214,16 @@ export function Index() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (fish) {
+      const timeout = setTimeout(() => {
+        setFish(null); // Reset fish state to show DefaultScreen
+      }, fish_info_display_time);
+
+      return () => clearTimeout(timeout); // Cleanup timeout
+    }
+  }, [fish]);
 
   useEffect(() => {
     let interval: number | null = null;

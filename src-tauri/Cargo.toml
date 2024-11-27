@@ -14,10 +14,8 @@ tauri-build = { version = "1", features = [] }
 tauri = { version = "1", features = [ "window-unminimize", "window-close", "window-unmaximize", "window-start-dragging", "window-hide", "window-show", "window-maximize", "window-minimize", "shell-open"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-window-shadows = "0.2.2"
 rand = "0.8.5"
-pn532 = "0.4.0"
-rppal = { version = "0.19.0", features = ["hal"] }
+bstr = "1.11.0"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
