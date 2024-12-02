@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import {
   Snowflake,
   FishIcon,
@@ -13,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { appWindow } from "@tauri-apps/api/window";
 
 interface Fish {
   id: number;
@@ -34,15 +36,26 @@ const fish_info_display_time_in_seconds = 10; // 10 seconds
 // Convert seconds to milliseconds
 const fish_info_display_time = fish_info_display_time_in_seconds * 1000;
 
+// Maximum number of snowflakes allowed on screen
+const MAX_SNOWFLAKES = 50; // Easily editable variable
+
+interface SnowflakeData {
+  id: number;
+  left: string;
+  fontSize: string;
+  animationDuration: number; // in milliseconds
+  animationDelay: number; // in milliseconds
+}
+
 function DefaultScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full space-y-8">
       <h2 className="text-4xl font-bold text-blue-700">
-        Welcome to Arctic Ice Fishing
+        Welcome to Polar Ice Fishing
       </h2>
       <p className="text-xl text-gray-600 text-center max-w-2xl">
-        Dive into the fascinating world of arctic fish! Catch a fish, scan it,
-        and uncover fascinating facts about your unique catch.
+        Dive into the fascinating world of fish! Catch a fish, scan it, and
+        uncover fascinating facts about your unique catch.
       </p>
     </div>
   );
@@ -195,7 +208,24 @@ function getStatusInfo(status: string): { color: string; icon: JSX.Element } {
 
 export function Index() {
   const [fish, setFish] = useState<Fish | null>(null);
-  const [snowflakes, setSnowflakes] = useState<JSX.Element[]>([]);
+  const [snowflakes, setSnowflakes] = useState<SnowflakeData[]>([]);
+  const snowflakeIdRef = useRef(0);
+
+  useEffect(() => {
+    // Maximize window first, then go fullscreen after half a second
+    const maximizeAndFullscreen = async () => {
+      try {
+        await appWindow.maximize(); // Maximize the window
+        setTimeout(async () => {
+          await appWindow.setFullscreen(true); // Fullscreen after 500ms
+        }, 500);
+      } catch (err) {
+        console.error("Error during window manipulation:", err);
+      }
+    };
+
+    maximizeAndFullscreen();
+  }, []);
 
   useEffect(() => {
     let unlisten: UnlistenFn | null = null;
@@ -228,22 +258,39 @@ export function Index() {
   useEffect(() => {
     let interval: number | null = null;
 
+    const addSnowflake = () => {
+      setSnowflakes((prevSnowflakes) => {
+        if (prevSnowflakes.length >= MAX_SNOWFLAKES) {
+          return prevSnowflakes;
+        }
+
+        const id = snowflakeIdRef.current++;
+        const left = `${Math.random() * 100}%`;
+        const fontSize = `${Math.random() * 10 + 10}px`;
+        const animationDuration = Math.random() * 10 + 25; // in seconds
+        const animationDelay = Math.random() * 10; // in seconds
+
+        const newSnowflake: SnowflakeData = {
+          id,
+          left,
+          fontSize,
+          animationDuration: animationDuration * 1000, // convert to ms
+          animationDelay: animationDelay * 1000, // convert to ms
+        };
+
+        // Schedule removal of the snowflake after its animation ends
+        setTimeout(() => {
+          setSnowflakes((current) =>
+            current.filter((flake) => flake.id !== id)
+          );
+        }, newSnowflake.animationDuration + newSnowflake.animationDelay + 1000); // extra buffer time
+
+        return [...prevSnowflakes, newSnowflake];
+      });
+    };
+
     interval = window.setInterval(() => {
-      setSnowflakes((prevSnowflakes) => [
-        ...prevSnowflakes,
-        <Snowflake
-          key={Math.random()}
-          className="text-blue-400 opacity-50 absolute"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `-10%`,
-            fontSize: `${Math.random() * 10 + 10}px`,
-            animation: `snowfall ${Math.random() * 10 + 25}s linear infinite`,
-            animationDelay: `${Math.random() * 10}s`,
-            zIndex: -1,
-          }}
-        />,
-      ]);
+      addSnowflake();
     }, 1500); // Add a new snowflake every 1.5 seconds
 
     return () => {
@@ -263,14 +310,14 @@ export function Index() {
           }
         }
       `}</style>
-      <div className="min-h-screen bg-gradient-to-b from-blue-100 to-blue-200 flex flex-col justify-center items-center p-4">
+      <div className="min-h-screen bg-gradient-to-b from-blue-100 to-blue-200 flex flex-col justify-center items-center p-4 relative">
         <Card
           className="w-full max-w-4xl bg-white/80 backdrop-blur-sm shadow-lg rounded-lg overflow-hidden border-4 border-blue-300"
           style={{ zIndex: 1 }}
         >
           <CardHeader className="bg-blue-500 text-white">
             <CardTitle className="text-3xl font-bold flex items-center justify-between">
-              <span>Arctic Fish Explorer</span>
+              <span>Polar Fish Explorer</span>
               <Snowflake className="w-8 h-8" />
             </CardTitle>
           </CardHeader>
@@ -279,7 +326,20 @@ export function Index() {
           </CardContent>
         </Card>
         <div className="fixed top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden">
-          {snowflakes}
+          {snowflakes.map((flake) => (
+            <Snowflake
+              key={flake.id}
+              className="text-blue-400 opacity-50 absolute"
+              style={{
+                left: flake.left,
+                top: `-10%`,
+                fontSize: flake.fontSize,
+                animation: `snowfall ${flake.animationDuration}ms linear`,
+                animationDelay: `${flake.animationDelay}ms`,
+                zIndex: -1,
+              }}
+            />
+          ))}
         </div>
       </div>
     </>

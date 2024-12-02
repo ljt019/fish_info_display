@@ -1938,6 +1938,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "polar_ice_fishing_scanner_gui"
+version = "1.0.0"
+dependencies = [
+ "bstr",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2821,18 +2833,6 @@ checksum = "5993dc129e544393574288923d1ec447c857f3f644187f4fbf7d9a875fbfc4fb"
 dependencies = [
  "embed-resource",
  "toml 0.7.8",
-]
-
-[[package]]
-name = "tauri_template"
-version = "0.1.0"
-dependencies = [
- "bstr",
- "rand 0.8.5",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
 ]
 
 [[package]]
